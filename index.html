@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Asset Ledger</title>
+<meta name="theme-color" content="#f4f0e7">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Asset Ledger">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<script src="config.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* warm-paper light ledger: OKLCH tinted neutrals + one restrained pine accent */
+    --bg:oklch(0.967 0.009 78);
+    --surface:oklch(0.993 0.005 82);
+    --panel:oklch(0.993 0.005 82);            /* legacy alias = surface */
+    --sunk:oklch(0.948 0.011 76);
+    --panel2:oklch(0.948 0.011 76);           /* legacy alias = sunk */
+    --line:oklch(0.886 0.012 74);
+    --line-2:oklch(0.815 0.015 70);
+    --txt:oklch(0.27 0.017 66);
+    --ink-2:oklch(0.42 0.015 66);
+    --muted:oklch(0.50 0.014 66);
+    --faint:oklch(0.60 0.012 70);
+    --accent:oklch(0.46 0.058 168);           /* deep ledger pine */
+    --accent-2:oklch(0.55 0.075 168);
+    --accent-wk:oklch(0.945 0.020 168);
+    --accent2:oklch(0.55 0.075 168);          /* legacy focus alias */
+    --gold:oklch(0.66 0.108 80);              /* subject marker only, not a theme color */
+    --good:oklch(0.52 0.085 158);
+    --bad:oklch(0.505 0.13 28);
+    --r:10px; --rc:8px; --radius:10px;
+    --shadow:0 1px 2px oklch(0.27 0.02 66/.05), 0 14px 30px -18px oklch(0.27 0.02 66/.18);
+    --ease:cubic-bezier(.22,1,.36,1);
+    --ui:'Geist','Segoe UI',system-ui,Roboto,Arial,sans-serif;
+    --mono:'Geist Mono','SFMono-Regular',ui-monospace,Menlo,monospace;
+    --serif:'Fraunces',Georgia,'Times New Roman',serif;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.55 var(--ui);
+       background-image:radial-gradient(oklch(0.5 0.02 70/.025) 1px,transparent 1px);background-size:22px 22px}
+  ::selection{background:var(--accent-wk);color:var(--accent)}
+
+  /* masthead */
+  header{display:flex;align-items:center;gap:16px;padding:18px 28px;
+         background:oklch(0.97 0.009 78/.85);backdrop-filter:saturate(1.2) blur(8px);
+         border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+  header h1{font:600 24px/1 var(--serif);margin:0;letter-spacing:-.01em;color:var(--txt)}
+  header h1 .gold{font-style:italic;color:var(--accent)}
+  .spacer{flex:1}
+  .pill{font:500 11px/1 var(--mono);padding:5px 11px;border-radius:999px;
+        background:var(--surface);border:1px solid var(--line);color:var(--muted);letter-spacing:.02em}
+
+  /* buttons */
+  button{font:500 13px/1 var(--ui);background:var(--surface);color:var(--txt);
+         border:1px solid var(--line);border-radius:var(--rc);padding:9px 14px;cursor:pointer;
+         transition:border-color .15s var(--ease),background .15s var(--ease),transform .08s var(--ease)}
+  button:hover{border-color:var(--accent-2);background:var(--sunk)}
+  button:active{transform:translateY(1px)}
+  button:focus-visible{outline:2px solid var(--accent-2);outline-offset:2px}
+  button.primary{background:var(--accent);color:oklch(0.98 0.012 95);border-color:var(--accent);font-weight:600}
+  button.primary:hover{background:var(--accent-2);border-color:var(--accent-2)}
+  button.ghost{background:transparent}
+  button.ghost:hover{background:var(--sunk)}
+
+  /* layout */
+  main{max-width:1160px;margin:0 auto;padding:30px 28px 0;display:grid;gap:26px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  @media(max-width:900px){.grid2{grid-template-columns:1fr}}
+
+  /* KPI stat band */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);
+        border:1px solid var(--line);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow)}
+  @media(max-width:760px){.kpis{grid-template-columns:1fr 1fr}}
+  .kpi{background:var(--surface);padding:18px 20px 16px}
+  .kpi.total{background:var(--accent-wk)}
+  .kpi .l{color:var(--muted);font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.07em}
+  .kpi .v{font:600 clamp(21px,2.5vw,27px)/1.1 var(--mono);margin-top:7px;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+  .kpi.total .l,.kpi.total .v{color:var(--accent)}
+  .delta{font:500 12px/1.3 var(--ui);margin-top:6px}
+  .delta.up{color:var(--good)} .delta.down{color:var(--bad)}
+  .delta.muted{color:var(--faint);font-weight:400}
+
+  /* panels */
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow)}
+  .card h2{margin:0;padding:15px 18px;font:600 14px/1.2 var(--ui);letter-spacing:.005em;
+           display:flex;align-items:center;gap:9px;border-bottom:1px solid var(--line)}
+  .card h2::before{content:"";width:7px;height:7px;border-radius:2px;background:var(--accent);flex:none}
+  .card h2.gold-h::before{background:var(--gold)}
+  .card h2 .sub{color:var(--faint);font-weight:400;font-size:12px;margin-left:auto;font-family:var(--ui)}
+  .card .body{padding:16px 18px 18px}
+
+  /* tables */
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--line)}
+  th:first-child,td:first-child{text-align:left}
+  th{color:var(--muted);font-weight:500;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em}
+  tbody tr{transition:background .12s var(--ease)}
+  tbody tr:hover{background:var(--sunk)}
+  tr:last-child td{border-bottom:none}
+  td.egp{color:var(--accent);font-weight:600}
+  .num{font-variant-numeric:tabular-nums}
+  td.num{font-family:var(--mono);font-size:12.5px;font-variant-numeric:tabular-nums}
+  .totrow td{font-weight:700;border-top:1.5px solid var(--line-2);color:var(--txt);padding-top:11px}
+
+  /* inputs */
+  input,select{background:var(--sunk);color:var(--txt);border:1px solid var(--line);border-radius:var(--rc);
+               padding:6px 8px;font:inherit;font-size:13px;width:100%;text-align:right;
+               transition:border-color .15s var(--ease),box-shadow .15s var(--ease)}
+  input:focus,select:focus{outline:none;border-color:var(--accent-2);box-shadow:0 0 0 3px var(--accent-wk)}
+  select,input.txt{text-align:left}
+  input[type=number]{font-family:var(--mono)}
+  .del{color:var(--muted);cursor:pointer;border:none;background:none;font-size:13px;line-height:1;
+       padding:3px 6px;border-radius:6px;transition:.15s var(--ease)}
+  .del:hover{color:var(--bad);background:var(--accent-wk)}
+  .addrow{margin-top:12px}
+
+  /* rates */
+  .ratebar{display:flex;flex-wrap:wrap;gap:9px;align-items:center}
+  .rate{display:flex;align-items:center;gap:6px;background:var(--sunk);border:1px solid var(--line);
+        border-radius:999px;padding:5px 6px 5px 12px;font:500 12px/1 var(--mono)}
+  .rate b{color:var(--accent);font-weight:600}
+  .rate input{width:74px;padding:3px 8px;border-radius:999px;font-size:12px}
+  .rate .muted{padding-right:8px}
+
+  .muted{color:var(--muted)}
+  .priceinp{display:flex;gap:10px;align-items:center}
+  .priceinp .muted{font-size:12.5px}
+  .priceinp input{width:120px}
+
+  canvas{width:100%;height:280px;display:block}
+  .status{font-size:12.5px;color:var(--muted);min-height:18px}
+  .foot{color:var(--faint);font-size:12px;text-align:center;padding:26px 0 36px;line-height:1.7}
+  .foot code{font-family:var(--mono);color:var(--muted);background:var(--sunk);padding:1px 6px;border-radius:5px;border:1px solid var(--line)}
+
+  /* motion */
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  main>*{animation:rise .5s var(--ease) backwards}
+  main>*:nth-child(2){animation-delay:.05s}
+  main>.grid2{animation-delay:.10s}
+  main>*:nth-child(4){animation-delay:.15s}
+  main>*:nth-child(5){animation-delay:.20s}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+  /* passcode gate (cosmetic client-side lock, not encryption) */
+  .lockscreen{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;
+              background:var(--bg);background-image:radial-gradient(oklch(0.5 0.02 70/.04) 1px,transparent 1px);background-size:22px 22px}
+  .lockscreen.hidden{display:none}
+  .lockbox{display:flex;flex-direction:column;gap:12px;width:min(340px,86vw);
+           background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+           padding:30px 28px;box-shadow:var(--shadow);animation:rise .5s var(--ease) backwards}
+  .lock-mark{font:600 22px/1 var(--serif);letter-spacing:-.01em}
+  .lock-mark span{font-style:italic;color:var(--accent)}
+  .lock-l{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-top:4px}
+  .lockbox input{text-align:left;padding:9px 11px;font-size:14px}
+  .lockbox button{width:100%;padding:10px}
+  .lock-err{color:var(--bad);font-size:12.5px;min-height:16px}
+  .lock-note{color:var(--faint);font-size:11px;line-height:1.5;border-top:1px solid var(--line);padding-top:11px}
+</style>
+</head>
+<body>
+<div id="lock" class="lockscreen">
+  <form class="lockbox" id="lockForm" autocomplete="off">
+    <div class="lock-mark">Asset <span>Ledger</span></div>
+    <label class="lock-l" for="lockpw">Passcode</label>
+    <input type="password" id="lockpw" autocomplete="current-password">
+    <button class="primary" type="submit">Unlock</button>
+    <div class="lock-err" id="lockErr"></div>
+    <div class="lock-note">Client-side lock only. Data lives unencrypted in this browser; anyone who opens the file can bypass this gate. Not real security.</div>
+  </form>
+</div>
+<header>
+  <h1>Asset <span class="gold">Ledger</span></h1>
+  <span class="pill" id="asof">live</span>
+  <div class="spacer"></div>
+  <button id="btnRefresh">Refresh FX</button>
+  <button id="btnGold">Refresh gold</button>
+  <button id="btnSnapshot" class="primary">Record snapshot</button>
+  <button id="btnExport" class="ghost">Export</button>
+  <button id="btnImport" class="ghost">Import</button>
+  <input type="file" id="fileImport" accept="application/json" style="display:none">
+  <span class="pill" id="cloudPill" hidden>cloud off</span>
+  <button id="btnCloud" class="ghost" hidden>☁ Sign in to sync</button>
+</header>
+
+<main>
+  <!-- KPIs -->
+  <section class="kpis" id="kpis"></section>
+
+  <!-- FX rates -->
+  <section class="card">
+    <h2>Exchange Rates <span class="sub">EGP per unit, editable. "Refresh FX" pulls live</span></h2>
+    <div class="body">
+      <div class="ratebar" id="rates"></div>
+      <div class="status" id="fxStatus"></div>
+      <div class="status" id="goldStatus"></div>
+    </div>
+  </section>
+
+  <div class="grid2">
+    <!-- Foreign money -->
+    <section class="card">
+      <h2>Foreign Money <span class="sub" id="foreignSub"></span></h2>
+      <div class="body">
+        <table id="foreignTbl">
+          <thead><tr><th>Label</th><th>Cur.</th><th>Amount</th><th>Rate</th><th>EGP</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <button class="ghost addrow" data-add="foreign">＋ Add holding</button>
+      </div>
+    </section>
+
+    <!-- EGP cash -->
+    <section class="card">
+      <h2>EGP Cash &amp; Banks <span class="sub" id="egpSub"></span></h2>
+      <div class="body">
+        <table id="egpTbl">
+          <thead><tr><th>Account</th><th>EGP</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <button class="ghost addrow" data-add="egp">＋ Add account</button>
+      </div>
+    </section>
+
+    <!-- 24K gold -->
+    <section class="card">
+      <h2 class="gold-h">24K Gold <span class="sub" id="g24Sub"></span></h2>
+      <div class="body">
+        <div class="priceinp" style="margin-bottom:10px">
+          <span class="muted">24K price (EGP/g):</span>
+          <input type="number" step="0.01" id="price24" class="num">
+        </div>
+        <table id="g24Tbl">
+          <thead><tr><th>Type</th><th>Weight</th><th>×Qty</th><th>Total g</th><th>EGP</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <button class="ghost addrow" data-add="g24">＋ Add item</button>
+      </div>
+    </section>
+
+    <!-- 21K gold -->
+    <section class="card">
+      <h2 class="gold-h">21K Gold <span class="sub" id="g21Sub"></span></h2>
+      <div class="body">
+        <div class="priceinp" style="margin-bottom:10px">
+          <span class="muted">21K price (EGP/g):</span>
+          <input type="number" step="0.01" id="price21" class="num">
+        </div>
+        <table id="g21Tbl">
+          <thead><tr><th>Type</th><th>Weight</th><th>×Qty</th><th>Total g</th><th>EGP</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <button class="ghost addrow" data-add="g21">＋ Add item</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- Net worth chart -->
+  <section class="card">
+    <h2>Net Worth Over Time <span class="sub">monthly snapshots</span></h2>
+    <div class="body"><canvas id="chart"></canvas></div>
+  </section>
+
+  <!-- Tracking log -->
+  <section class="card">
+    <h2>Tracking Log <span class="sub">snapshot history, Δ = change vs previous</span></h2>
+    <div class="body" style="overflow-x:auto">
+      <table id="trackTbl">
+        <thead><tr>
+          <th>Date</th><th>Foreign EGP</th><th>EGP Cash</th><th>24K EGP</th><th>21K EGP</th><th>Total</th><th>Δ Change</th><th></th>
+        </tr></thead>
+        <tbody></tbody>
+        <tfoot><tr class="totrow"><td colspan="6">Total change</td><td id="trackDelta" class="num"></td><td></td></tr></tfoot>
+      </table>
+    </div>
+  </section>
+
+  <div class="foot">Local-only. Data saved in this browser (localStorage). Export regularly to back up. · Replaces <code>Assets-auto.xlsm</code></div>
+</main>
+
+<script>
+//==================== Default seed (from the original workbook) ====================
+// NOTE: blank starter template — NO personal data lives in this public file.
+// Your real holdings load privately: Import your JSON export once, then sign in
+// (the import is pushed to your private Firestore and synced to every device).
+// rates/prices below are public market defaults and auto-refresh from live APIs.
+const SEED = {
+  rates: {USD:51.7734, EUR:60.2591, GBP:69.6715, CHF:65.7273, JPY:0.323928, SAR:13.789, KWD:168.6431, AED:14.0968, CNY:7.6427},
+  foreign:[],
+  egp:[],
+  price24:7531.43,
+  g24:[],
+  price21:6590,
+  g21:[],
+  tracking:[],
+};
+
+//==================== State ====================
+const KEY="assetTracker_v1";
+const TSKEY="assetTracker_v1_ts";
+let S = load();
+let _cloudPush=null, _applyingRemote=false;
+function load(){
+  try{const r=localStorage.getItem(KEY); if(r) return JSON.parse(r);}catch(e){}
+  return structuredClone(SEED);
+}
+function save(){
+  localStorage.setItem(KEY, JSON.stringify(S));
+  localStorage.setItem(TSKEY, String(Date.now()));
+  if(_cloudPush && !_applyingRemote){ try{ _cloudPush(S); }catch(e){} }
+}
+// Bridge for the cloud-sync module (loaded separately below as type=module).
+// Local-only when no Firebase config is present, so this is all inert by default.
+window.LEDGER = {
+  getState:()=>S,
+  getLocalTs:()=>{ const t=+localStorage.getItem(TSKEY); return isFinite(t)?t:0; },
+  applyRemote:(state)=>{ _applyingRemote=true; try{ S=state; render(); }finally{ _applyingRemote=false; } },
+  registerPush:(fn)=>{ _cloudPush=fn; },
+  backup:null,   // set by the sync module when Google Drive backup is enabled
+};
+
+//==================== Helpers ====================
+const $=s=>document.querySelector(s);
+const fmt=n=>(isFinite(n)?n:0).toLocaleString("en-US",{minimumFractionDigits:0,maximumFractionDigits:0});
+const fmt2=n=>(isFinite(n)?n:0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const num=v=>{const x=parseFloat(v);return isNaN(x)?0:x;};
+const CURS=()=>Object.keys(S.rates);
+
+//==================== Compute ====================
+function totals(){
+  const foreign=S.foreign.reduce((s,h)=>s+h.amount*(S.rates[h.cur]||0),0);
+  const egp=S.egp.reduce((s,a)=>s+a.amount,0);
+  const w24=S.g24.reduce((s,g)=>s+g.weight*g.qty,0);
+  const w21=S.g21.reduce((s,g)=>s+g.weight*g.qty,0);
+  const g24=w24*S.price24, g21=w21*S.price21;
+  return {foreign,egp,w24,w21,g24,g21,total:foreign+egp+g24+g21};
+}
+
+//==================== Render ====================
+function render(){
+  const t=totals();
+  // KPIs
+  const prev = S.tracking.length ? S.tracking[S.tracking.length-1].total : null;
+  const d = prev!=null ? t.total-prev : null;
+  const dHtml = d==null ? "" :
+    `<div class="delta ${d>=0?'up':'down'}">${d>=0?'▲':'▼'} ${fmt(Math.abs(d))} vs last snapshot</div>`;
+  $("#kpis").innerHTML = `
+    ${kpi("Foreign Money", t.foreign)}
+    ${kpi("EGP Cash", t.egp)}
+    ${kpi("Gold (24K+21K)", t.g24+t.g21, `${fmt2(t.w24+t.w21)} g`)}
+    <div class="kpi total"><div class="l">Net Worth</div><div class="v">${fmt(t.total)}</div>${dHtml}</div>`;
+
+  // Rates
+  $("#rates").innerHTML = CURS().map(c=>
+    `<div class="rate">${c} <b>=</b> <input data-rate="${c}" type="number" step="0.0001" value="${S.rates[c]}"> <span class="muted">EGP</span></div>`
+  ).join("");
+
+  // Foreign
+  $("#foreignTbl tbody").innerHTML = S.foreign.map((h,i)=>{
+    const egp=h.amount*(S.rates[h.cur]||0);
+    return `<tr>
+      <td><input class="txt" data-f="${i}" data-k="label" value="${h.label}"></td>
+      <td><select data-f="${i}" data-k="cur">${CURS().map(c=>`<option ${c===h.cur?'selected':''}>${c}</option>`).join("")}</select></td>
+      <td><input type="number" data-f="${i}" data-k="amount" value="${h.amount}"></td>
+      <td class="num muted">${fmt2(S.rates[h.cur]||0)}</td>
+      <td class="egp num">${fmt(egp)}</td>
+      <td><button class="del" data-delf="${i}">✕</button></td></tr>`;
+  }).join("");
+  $("#foreignSub").textContent = fmt(t.foreign)+" EGP";
+
+  // EGP cash
+  $("#egpTbl tbody").innerHTML = S.egp.map((a,i)=>`<tr>
+      <td><input class="txt" data-e="${i}" data-k="label" value="${a.label}"></td>
+      <td><input type="number" data-e="${i}" data-k="amount" value="${a.amount}"></td>
+      <td><button class="del" data-dele="${i}">✕</button></td></tr>`).join("");
+  $("#egpSub").textContent = fmt(t.egp)+" EGP";
+
+  // Gold tables
+  renderGold("g24", S.g24, S.price24);
+  renderGold("g21", S.g21, S.price21);
+  $("#price24").value=S.price24; $("#price21").value=S.price21;
+  $("#g24Sub").textContent = `${fmt2(t.w24)} g · ${fmt(t.g24)} EGP`;
+  $("#g21Sub").textContent = `${fmt2(t.w21)} g · ${fmt(t.g21)} EGP`;
+
+  renderTracking();
+  drawChart();
+  $("#asof").textContent = "as of "+new Date().toLocaleString();
+  save();
+}
+function kpi(l,v,extra){return `<div class="kpi"><div class="l">${l}</div><div class="v">${fmt(v)}</div>${extra?`<div class="delta muted">${extra}</div>`:""}</div>`;}
+
+function renderGold(which,arr,price){
+  $("#"+which+"Tbl tbody").innerHTML = arr.map((g,i)=>{
+    const tot=g.weight*g.qty, egp=tot*price;
+    return `<tr>
+      <td><input class="txt" data-g="${which}" data-i="${i}" data-k="type" value="${g.type}"></td>
+      <td><input type="number" step="0.01" data-g="${which}" data-i="${i}" data-k="weight" value="${g.weight}"></td>
+      <td><input type="number" data-g="${which}" data-i="${i}" data-k="qty" value="${g.qty}"></td>
+      <td class="num muted">${fmt2(tot)}</td>
+      <td class="egp num">${fmt(egp)}</td>
+      <td><button class="del" data-delg="${which}" data-i="${i}">✕</button></td></tr>`;
+  }).join("");
+}
+
+function renderTracking(){
+  const tb=$("#trackTbl tbody"); const rows=S.tracking;
+  tb.innerHTML = rows.map((r,i)=>{
+    const delta = i>0 ? r.total-rows[i-1].total : null;
+    const dCell = delta==null ? '<td class="muted">·</td>'
+      : `<td class="num" style="color:${delta>=0?'var(--good)':'var(--bad)'}">${delta>=0?'+':'−'}${fmt(Math.abs(delta))}</td>`;
+    return `<tr>
+      <td>${r.date}</td>
+      <td class="num muted">${fmt(r.foreign)}</td>
+      <td class="num muted">${fmt(r.egp)}</td>
+      <td class="num muted">${fmt(r.g24)}</td>
+      <td class="num muted">${fmt(r.g21)}</td>
+      <td class="egp num">${fmt(r.total)}</td>
+      ${dCell}
+      <td><button class="del" data-delt="${i}">✕</button></td></tr>`;
+  }).join("");
+  let tot=0; for(let i=1;i<rows.length;i++) tot+=rows[i].total-rows[i-1].total;
+  $("#trackDelta").textContent=(tot>=0?'+':'−')+fmt(Math.abs(tot));
+  $("#trackDelta").style.color = tot>=0?'var(--good)':'var(--bad)';
+}
+
+//==================== Chart (canvas line) ====================
+function drawChart(){
+  const cv=$("#chart"), dpr=window.devicePixelRatio||1;
+  const W=cv.clientWidth, H=280; cv.width=W*dpr; cv.height=H*dpr;
+  const ctx=cv.getContext("2d"); ctx.scale(dpr,dpr); ctx.clearRect(0,0,W,H);
+  const data=S.tracking; if(data.length<1)return;
+  const pad={l:64,r:16,t:18,b:30};
+  const xs=data.map((_,i)=>i), ys=data.map(d=>d.total);
+  const minY=Math.min(...ys)*0.97, maxY=Math.max(...ys)*1.02;
+  const X=i=>pad.l+(W-pad.l-pad.r)*(data.length<2?0.5:i/(data.length-1));
+  const Y=v=>pad.t+(H-pad.t-pad.b)*(1-(v-minY)/(maxY-minY||1));
+  // grid + y labels
+  ctx.strokeStyle="#e3ded6"; ctx.fillStyle="#8b837b"; ctx.font="11px 'Geist Mono',ui-monospace,monospace"; ctx.textAlign="right";
+  for(let g=0;g<=4;g++){const v=minY+(maxY-minY)*g/4, y=Y(v);
+    ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(W-pad.r,y);ctx.stroke();
+    ctx.fillText((v/1e6).toFixed(2)+"M", pad.l-8, y+4);}
+  // area
+  const grad=ctx.createLinearGradient(0,pad.t,0,H-pad.b);
+  grad.addColorStop(0,"rgba(48,103,90,.16)"); grad.addColorStop(1,"rgba(48,103,90,0)");
+  ctx.beginPath(); ctx.moveTo(X(0),Y(ys[0]));
+  data.forEach((d,i)=>ctx.lineTo(X(i),Y(d.total)));
+  ctx.lineTo(X(data.length-1),H-pad.b); ctx.lineTo(X(0),H-pad.b); ctx.closePath();
+  ctx.fillStyle=grad; ctx.fill();
+  // line
+  ctx.beginPath(); data.forEach((d,i)=>i?ctx.lineTo(X(i),Y(d.total)):ctx.moveTo(X(i),Y(d.total)));
+  ctx.strokeStyle="#30675a"; ctx.lineWidth=2; ctx.stroke();
+  // points + x labels
+  ctx.textAlign="center";
+  data.forEach((d,i)=>{
+    ctx.beginPath(); ctx.arc(X(i),Y(d.total),3.5,0,7); ctx.fillStyle="#30675a"; ctx.fill();
+    ctx.fillStyle="#8b837b"; ctx.fillText(d.date.slice(5), X(i), H-10);
+  });
+}
+
+//==================== Events ====================
+document.addEventListener("input",e=>{
+  const t=e.target;
+  if(t.dataset.rate!==undefined){ S.rates[t.dataset.rate]=num(t.value); render(); }
+  else if(t.dataset.f!==undefined){ const h=S.foreign[+t.dataset.f]; h[t.dataset.k]= t.dataset.k==='amount'?num(t.value):t.value; render(); }
+  else if(t.dataset.e!==undefined){ const a=S.egp[+t.dataset.e]; a[t.dataset.k]= t.dataset.k==='amount'?num(t.value):t.value; render(); }
+  else if(t.dataset.g!==undefined){ const arr=S[t.dataset.g]; const it=arr[+t.dataset.i]; const k=t.dataset.k; it[k]= k==='type'?t.value:num(t.value); render(); }
+  else if(t.id==="price24"){ S.price24=num(t.value); render(); }
+  else if(t.id==="price21"){ S.price21=num(t.value); render(); }
+});
+document.addEventListener("click",e=>{
+  const t=e.target, d=t.dataset;
+  if(d.add==="foreign"){ S.foreign.push({label:"New",cur:CURS()[0],amount:0}); render(); }
+  else if(d.add==="egp"){ S.egp.push({label:"New",amount:0}); render(); }
+  else if(d.add==="g24"){ S.g24.push({type:"Ingot",weight:0,qty:1}); render(); }
+  else if(d.add==="g21"){ S.g21.push({type:"Item",weight:0,qty:1}); render(); }
+  else if(d.delf!==undefined){ S.foreign.splice(+d.delf,1); render(); }
+  else if(d.dele!==undefined){ S.egp.splice(+d.dele,1); render(); }
+  else if(d.delg!==undefined){ S[d.delg].splice(+d.i,1); render(); }
+  else if(d.delt!==undefined){ if(confirm("Delete this snapshot?")){ S.tracking.splice(+d.delt,1); render(); } }
+});
+
+// Record snapshot (= VBA RecordAssetTracking)
+$("#btnSnapshot").onclick=()=>{
+  const t=totals();
+  const date=new Date().toISOString().slice(0,10);
+  S.tracking.push({date, foreign:t.foreign, egp:t.egp, g24:t.g24, g21:t.g21, total:t.total});
+  render();                                   // save() pushes the snapshot to Firestore if signed in
+  if(window.LEDGER && window.LEDGER.backup) window.LEDGER.backup(S);   // mirror a JSON copy to Google Drive
+};
+
+// Refresh live FX (= VBA RefreshAllData, FX portion)
+$("#btnRefresh").onclick=async()=>{
+  const st=$("#fxStatus"); st.textContent="Fetching live rates…";
+  try{
+    const r=await fetch("https://open.er-api.com/v6/latest/USD");
+    const j=await r.json();
+    if(j.result!=="success") throw new Error("feed error");
+    const perUSD=j.rates;               // foreign units per 1 USD
+    const egpPerUSD=perUSD.EGP;          // EGP per USD
+    const map={USD:1,EUR:"EUR",GBP:"GBP",CHF:"CHF",SAR:"SAR",KWD:"KWD",AED:"AED",CNY:"CNY",JPY:"JPY"};
+    Object.keys(map).forEach(c=>{
+      if(c==="USD"){ S.rates.USD=egpPerUSD; return; }
+      const u=perUSD[c]; if(!u) return;
+      let egpPerUnit=egpPerUSD/u;                 // EGP per 1 unit of c
+      if(c==="JPY") egpPerUnit=egpPerUnit;        // stored per single yen
+      if(S.rates[c]!==undefined) S.rates[c]=+egpPerUnit.toFixed(4);
+    });
+    render();
+    st.textContent="FX updated "+new Date().toLocaleTimeString()+
+      ". Use “Refresh gold” for 24K/21K.";
+  }catch(err){
+    st.textContent="✗ Live fetch failed ("+err.message+"). Edit rates manually.";
+  }
+};
+
+// Refresh gold (Excel source ta3weem.com is a JS-rendered SPA, unreachable from
+// browser JS; the Egyptian retail value is derived from international spot XAU
+// price × live USD/EGP, with karat purity 24K=1, 21K=0.875).
+$("#btnGold").onclick=async()=>{
+  const st=$("#goldStatus"); st.textContent="Fetching gold price…";
+  try{
+    const [gx,fx]=await Promise.all([
+      fetch("https://api.gold-api.com/price/XAU").then(r=>r.json()),
+      fetch("https://open.er-api.com/v6/latest/USD").then(r=>r.json()),
+    ]);
+    const usdPerOz=gx&&gx.price;                          // international spot, USD/oz
+    const egpPerUsd=(fx&&fx.rates&&fx.rates.EGP)||S.rates.USD;
+    if(!usdPerOz||!egpPerUsd) throw new Error("bad data");
+    const egpPerGram24=usdPerOz/31.1034768*egpPerUsd;    // 24K pure bullion, EGP/g
+    S.price24=+egpPerGram24.toFixed(2);
+    S.price21=+(egpPerGram24*21/24).toFixed(2);
+    S.rates.USD=+egpPerUsd.toFixed(4);
+    render();
+    st.textContent="Gold from spot $"+usdPerOz.toFixed(2)+"/oz × "+egpPerUsd.toFixed(2)+
+      " EGP/USD → 24K "+fmt2(S.price24)+", 21K "+fmt2(S.price21)+
+      " EGP/g (bullion value; Egyptian retail runs ~5–10% higher — edit if your dealer differs).";
+  }catch(err){
+    st.textContent="✗ Gold fetch failed ("+err.message+"). Set 24K/21K manually.";
+  }
+};
+
+//==================== Passcode gate (client-side, cosmetic) ====================
+const PW_HASH="5407b74d548f3ed59b45b459dfa7cbba01b8afad0c689a61889786254c017a4f";
+const LOCK_KEY="assetTracker_unlocked";
+async function sha256hex(s){
+  const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s));
+  return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("");
+}
+function unlock(){ $("#lock").classList.add("hidden"); try{sessionStorage.setItem(LOCK_KEY,"1");}catch(e){} }
+if(sessionStorage.getItem(LOCK_KEY)==="1"){ unlock(); }
+else{ setTimeout(()=>$("#lockpw").focus(),60); }
+$("#lockForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  try{
+    if(await sha256hex($("#lockpw").value)===PW_HASH){ $("#lockErr").textContent=""; unlock(); }
+    else{ $("#lockErr").textContent="Wrong passcode."; $("#lockpw").select(); }
+  }catch(x){ $("#lockErr").textContent="Crypto unavailable in this browser context."; }
+});
+
+// Export / Import
+$("#btnExport").onclick=()=>{
+  const blob=new Blob([JSON.stringify(S,null,2)],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob); a.download="assets-backup-"+new Date().toISOString().slice(0,10)+".json"; a.click();
+};
+$("#btnImport").onclick=()=>$("#fileImport").click();
+$("#fileImport").onchange=e=>{
+  const f=e.target.files[0]; if(!f)return;
+  const rd=new FileReader();
+  rd.onload=()=>{ try{ S=JSON.parse(rd.result); save(); render(); }catch(x){ alert("Bad file"); } };
+  rd.readAsText(f);
+};
+window.addEventListener("resize",drawChart);
+
+//==================== Go ====================
+render();
+</script>
+
+<!-- PWA service worker (offline + installable). No-op when opened from file:// -->
+<script>
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+</script>
+
+<!-- Cloud sync: Firebase Firestore (two-way desktop<->mobile) + optional Google Drive backup.
+     Fully inert unless window.LEDGER_CONFIG.firebase is filled in config.js. -->
+<script type="module">
+const CFG = (window.LEDGER_CONFIG||{});
+const FB  = CFG.firebase;
+const $pill=document.getElementById('cloudPill');
+const $btn =document.getElementById('btnCloud');
+const setPill=t=>{ if($pill) $pill.textContent=t; };
+
+if(FB && FB.apiKey){
+  $btn.hidden=false; $pill.hidden=false; setPill('cloud: connecting…');
+  const appMod  = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
+  const authMod = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js');
+  const fsMod   = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
+  const { initializeApp }=appMod;
+  const { getAuth,GoogleAuthProvider,signInWithPopup,signInWithRedirect,getRedirectResult,
+          signOut,onAuthStateChanged,setPersistence,browserLocalPersistence }=authMod;
+  const { getFirestore,doc,onSnapshot,setDoc }=fsMod;
+
+  const app=initializeApp(FB), auth=getAuth(app), db=getFirestore(app);
+  const provider=new GoogleAuthProvider();
+  if(CFG.driveBackup) provider.addScope('https://www.googleapis.com/auth/drive.file');
+  try{ await setPersistence(auth,browserLocalPersistence); }catch(e){}
+
+  let uid=null, unsub=null, lastPushedJson=null, pushTimer=null, driveToken=null;
+  const DRIVE_ID_KEY='assetLedger_driveFileId';
+  const ref=()=>doc(db,'users',uid,'ledger','main');
+
+  // Recover a Drive access token if we came back via redirect sign-in (mobile/PWA path)
+  try{ const rr=await getRedirectResult(auth);
+       if(rr){ const c=GoogleAuthProvider.credentialFromResult(rr); if(c&&c.accessToken) driveToken=c.accessToken; } }catch(e){}
+
+  function schedulePush(state){
+    if(!uid) return;
+    clearTimeout(pushTimer);
+    pushTimer=setTimeout(async()=>{
+      const json=JSON.stringify(state); lastPushedJson=json;
+      try{ await setDoc(ref(),{ data:json, updatedAt:Date.now() });
+           setPill('cloud: synced '+new Date().toLocaleTimeString()); }
+      catch(e){ setPill('cloud: save failed'); }
+    },700);
+  }
+
+  async function driveBackup(state){
+    if(!CFG.driveBackup) return;
+    if(!driveToken){ setPill('cloud: re-sign-in for Drive backup'); return; }
+    const name=CFG.driveFileName||'asset-ledger-backup.json';
+    const body=JSON.stringify(state,null,2);
+    const auth401=()=>{ driveToken=null; setPill('cloud: Drive token expired — sign in again'); };
+    try{
+      let id=localStorage.getItem(DRIVE_ID_KEY);
+      if(!id){
+        const q=encodeURIComponent("name='"+name+"' and trashed=false");
+        const r=await fetch('https://www.googleapis.com/drive/v3/files?spaces=drive&fields=files(id)&q='+q,
+                            {headers:{Authorization:'Bearer '+driveToken}});
+        if(r.status===401) return auth401();
+        const j=await r.json(); if(j.files&&j.files[0]) id=j.files[0].id;
+      }
+      if(id){
+        const r=await fetch('https://www.googleapis.com/upload/drive/v3/files/'+id+'?uploadType=media',
+                  {method:'PATCH',headers:{Authorization:'Bearer '+driveToken,'Content-Type':'application/json'},body});
+        if(r.status===401) return auth401();
+        if(!r.ok) throw new Error('drive '+r.status);
+      }else{
+        const b='ledger'+Math.random().toString(36).slice(2);
+        const meta=JSON.stringify({name,mimeType:'application/json'});
+        const multipart='--'+b+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+meta+
+                        '\r\n--'+b+'\r\nContent-Type: application/json\r\n\r\n'+body+'\r\n--'+b+'--';
+        const r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
+                  {method:'POST',headers:{Authorization:'Bearer '+driveToken,'Content-Type':'multipart/related; boundary='+b},body:multipart});
+        if(r.status===401) return auth401();
+        if(!r.ok) throw new Error('drive '+r.status);
+        const j=await r.json(); if(j.id) localStorage.setItem(DRIVE_ID_KEY,j.id);
+      }
+      setPill('cloud: synced + Drive backup '+new Date().toLocaleTimeString());
+    }catch(e){ setPill('cloud: Drive backup failed'); }
+  }
+
+  window.LEDGER.registerPush(schedulePush);
+  window.LEDGER.backup=driveBackup;
+
+  onAuthStateChanged(auth, user=>{
+    if(unsub){ unsub(); unsub=null; }
+    if(!user){ uid=null; $btn.textContent='☁ Sign in to sync'; setPill('cloud: signed out'); return; }
+    uid=user.uid;
+    $btn.textContent='☁ '+(user.displayName||user.email||'account')+' · sign out';
+    setPill('cloud: syncing…');
+    unsub=onSnapshot(ref(), snap=>{
+      if(!snap.exists()){ schedulePush(window.LEDGER.getState()); return; }   // seed cloud from this device
+      const d=snap.data(); const json=d.data;
+      if(typeof json!=='string') return;
+      if(json===lastPushedJson) return;                                       // our own echo
+      if(json===JSON.stringify(window.LEDGER.getState())) return;             // already identical
+      const remoteTs=+d.updatedAt||0, localTs=window.LEDGER.getLocalTs();
+      if(remoteTs>=localTs){                                                  // remote is newer -> adopt it
+        lastPushedJson=json;
+        window.LEDGER.applyRemote(JSON.parse(json));
+        setPill('cloud: updated from other device '+new Date().toLocaleTimeString());
+      }else{ schedulePush(window.LEDGER.getState()); }                        // local is newer -> push up
+    }, ()=>setPill('cloud: listen error'));
+  });
+
+  $btn.onclick=async()=>{
+    if(uid){ await signOut(auth); driveToken=null; localStorage.removeItem(DRIVE_ID_KEY); return; }
+    try{
+      const res=await signInWithPopup(auth,provider);
+      const c=GoogleAuthProvider.credentialFromResult(res); if(c&&c.accessToken) driveToken=c.accessToken;
+    }catch(e){
+      const code=e&&e.code||'';
+      if(code.indexOf('popup')>=0 || code.indexOf('operation-not-supported')>=0){
+        try{ await signInWithRedirect(auth,provider); }catch(_){ setPill('cloud: sign-in failed'); }
+      }else setPill('cloud: sign-in failed ('+code+')');
+    }
+  };
+}
+</script>
+</body>
+</html>
