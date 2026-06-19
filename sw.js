@@ -3,7 +3,7 @@
  * falling back to cache when offline. Cross-origin (Firebase, Google APIs,
  * Google Fonts) is never intercepted — those always go straight to network.
  */
-const CACHE = 'asset-ledger-v1';
+const CACHE = 'asset-ledger-v2';
 const SHELL = [
   './', './index.html', './config.js',
   './manifest.webmanifest', './icon-192.png', './icon-512.png'

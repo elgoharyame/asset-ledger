@@ -323,7 +323,7 @@ function save(){
 window.LEDGER = {
   getState:()=>S,
   getLocalTs:()=>{ const t=+localStorage.getItem(TSKEY); return isFinite(t)?t:0; },
-  applyRemote:(state)=>{ _applyingRemote=true; try{ S=state; render(); }finally{ _applyingRemote=false; } },
+  applyRemote:(state)=>{ _applyingRemote=true; try{ S=state; localStorage.setItem(KEY, JSON.stringify(S)); render(); }finally{ _applyingRemote=false; } },
   registerPush:(fn)=>{ _cloudPush=fn; },
   backup:null,   // set by the sync module when Google Drive backup is enabled
 };
@@ -679,18 +679,21 @@ if(FB && FB.apiKey){
     uid=user.uid;
     $btn.textContent='☁ '+(user.displayName||user.email||'account')+' · sign out';
     setPill('cloud: syncing…');
+    let firstSnap=true;          // first snapshot of this sign-in always ADOPTS cloud,
+                                 // so a fresh/blank device can never overwrite good cloud data on connect.
     unsub=onSnapshot(ref(), snap=>{
-      if(!snap.exists()){ schedulePush(window.LEDGER.getState()); return; }   // seed cloud from this device
+      if(!snap.exists()){ schedulePush(window.LEDGER.getState()); firstSnap=false; return; } // empty cloud -> seed it from this device
       const d=snap.data(); const json=d.data;
       if(typeof json!=='string') return;
-      if(json===lastPushedJson) return;                                       // our own echo
-      if(json===JSON.stringify(window.LEDGER.getState())) return;             // already identical
+      if(json===lastPushedJson){ firstSnap=false; return; }                   // our own echo
+      if(json===JSON.stringify(window.LEDGER.getState())){ firstSnap=false; return; } // already identical
       const remoteTs=+d.updatedAt||0, localTs=window.LEDGER.getLocalTs();
-      if(remoteTs>=localTs){                                                  // remote is newer -> adopt it
+      if(firstSnap || remoteTs>=localTs){                                     // first connect pulls cloud; afterwards newest wins
         lastPushedJson=json;
         window.LEDGER.applyRemote(JSON.parse(json));
         setPill('cloud: updated from other device '+new Date().toLocaleTimeString());
-      }else{ schedulePush(window.LEDGER.getState()); }                        // local is newer -> push up
+      }else{ schedulePush(window.LEDGER.getState()); }                        // local genuinely newer -> push up
+      firstSnap=false;
     }, ()=>setPill('cloud: listen error'));
   });
 
