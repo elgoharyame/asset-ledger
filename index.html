@@ -51,9 +51,10 @@
   ::selection{background:var(--accent-wk);color:var(--accent)}
 
   /* masthead */
-  header{display:flex;align-items:center;gap:16px;padding:18px 28px;
+  header{display:flex;align-items:center;gap:16px;padding:18px 28px;box-sizing:border-box;width:100%;
          background:oklch(0.97 0.009 78/.85);backdrop-filter:saturate(1.2) blur(8px);
          border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+  header>*{min-width:0}
   header h1{font:600 24px/1 var(--serif);margin:0;letter-spacing:-.01em;color:var(--txt)}
   header h1 .gold{font-style:italic;color:var(--accent)}
   .spacer{flex:1}
@@ -153,6 +154,8 @@
 
   /* passcode gate (cosmetic client-side lock, not encryption) */
   .lockscreen{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;
+              padding:20px;box-sizing:border-box;overflow:auto;
+              padding-top:max(20px,env(safe-area-inset-top));padding-bottom:max(20px,env(safe-area-inset-bottom));
               background:var(--bg);background-image:radial-gradient(oklch(0.5 0.02 70/.04) 1px,transparent 1px);background-size:22px 22px}
   .lockscreen.hidden{display:none}
   .lockbox{display:flex;flex-direction:column;gap:12px;width:min(340px,86vw);
@@ -183,6 +186,12 @@
     input,select{font-size:12px;padding:5px 6px}
     .priceinp input{width:96px}
     .kpi{padding:14px 14px 12px}
+    header button{flex:0 1 auto;white-space:normal;word-break:break-word}  /* long sign-in label wraps, never spills */
+    .lockbox{width:min(360px,92vw);padding:22px 18px}                       /* password box fits any phone width */
+  }
+  /* very short viewports (landscape phones): cap lockbox height, scroll inside it */
+  @media(max-height:560px){
+    .lockbox{max-height:calc(100dvh - 32px);overflow:auto}
   }
 </style>
 </head>
