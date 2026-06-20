@@ -611,6 +611,9 @@ window.addEventListener("resize",drawChart);
 
 //==================== Go ====================
 render();
+
+// auto-refresh live FX + gold rates every time the app opens (silent no-op if offline)
+if(navigator.onLine){ $("#btnRefresh").click(); $("#btnGold").click(); }
 </script>
 
 <!-- PWA service worker (offline + installable). No-op when opened from file:// -->
